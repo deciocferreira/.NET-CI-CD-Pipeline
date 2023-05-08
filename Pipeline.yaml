@@ -1,0 +1,41 @@
+trigger:
+- master
+
+pool:
+  vmImage: 'windows-latest'
+
+variables:
+  buildConfiguration: 'Release'
+
+steps:
+- task: DotNetCoreCLI@2
+  inputs:
+    command: 'build'
+    projects: '**/*.csproj'
+    arguments: '--configuration $(buildConfiguration)'
+
+- task: DotNetCoreCLI@2
+  inputs:
+    command: 'test'
+    projects: '**/*Tests.csproj'
+    arguments: '--configuration $(buildConfiguration)'
+
+- task: DotNetCoreCLI@2
+  inputs:
+    command: 'pack'
+    packagesToPack: '**/*.csproj'
+    versioningScheme: 'byEnvVar'
+    versionEnvVar: 'BUILD_BUILDNUMBER'
+    arguments: '--configuration $(buildConfiguration)'
+
+- task: NuGetAuthenticate@0
+  inputs:
+    nuGetServiceConnections: 'NuGetServiceConnection'
+  
+- task: NuGetCommand@2
+  inputs:
+    command: 'push'
+    packagesToPush: '$(Build.ArtifactStagingDirectory)/**/*.nupkg'
+    nuGetFeedType: 'internal'
+    publishFeedCredentials: 'NuGetServiceConnection'
+    allowPackageConflicts: true
